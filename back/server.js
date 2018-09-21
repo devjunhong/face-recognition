@@ -2,6 +2,26 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt-nodejs');
 const cors = require('cors');
+const knex = require('knex');
+const db = knex({
+  client: 'pg',
+  connection: {
+    host : '127.0.0.1',
+    user : 'junhong',
+    password : '',
+    database : 'face-detect'
+  }
+});
+
+const register = require('./controller/register');
+const signin = require('./controller/signin');
+const profile = require('./controller/profile');
+const image = require('./controller/image');
+
+db.select('*').from('users').then(data => {
+  console.log(data);
+});
+
 const app = express();
 
 app.use(bodyParser.json());
@@ -33,54 +53,15 @@ app.get('/', (req, res) => {
   res.send(database.users);
 })
 
-app.post('/signin', (req, res) => {
-  if(req.body.email === database.users[0].email &&
-    req.body.password === database.users[0].password){
-    // res.json('success');
-    res.json(database.users[0]);
-  }else{
-    res.status(400).json('fail to login');
-  }
-})
+app.post('/signin', signin.handleSignin(db, bcrypt))
 
-app.post('/register', (req, res) => {
-  const { email, name, password } = req.body;
+// dependency injection
+app.post('/register', (req, res) => { register.handleRegister(req, res, db, bcrypt) })
 
-  database.users.push({
-      id: '125',
-      name: name,
-      email: email,
-      password: password,
-      entries: 0,
-      join: new Date()
-  });
+app.get('/profile/:id', (req, res) => { profile.handleProfile(req, res, db) })
 
-  // res.send('ok wellcome');
-  res.json(database.users[database.users.length - 1]);
-})
-
-app.get('/profile/:id', (req, res) => {
-  const { id } = req.params; 
-  const found = database.users.filter(user => user.id === id);
-
-  if (found.length === 0){
-    res.status(400).send('no such user');
-  }else{
-    res.json(found[0]);
-  }
-})
-
-app.put('/image', (req, res) => {
-  const { id } = req.body; 
-  const found = database.users.filter(user => user.id === id);
-  
-  if (found.length === 0){
-    res.status(400).send('no such user');
-  }else{
-    found[0].entries++;
-    res.json(found[0].entries);
-  }
-})
+app.put('/image', (req, res) => { image.handleImage(req, res, db) })
+app.post('/imageurl', (req, res) => { image.handleApiCall(req, res) })
 
 app.listen(port, () => {
   console.log(`app is listen on port ${port}...`);
