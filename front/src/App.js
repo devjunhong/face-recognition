@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import Clarifai from'clarifai';
 import Particles from 'react-particles-js';
 import Navigation from './components/Navigation/Navigation';
 import Signin from './components/Signin/Signin';
@@ -9,10 +8,6 @@ import ImageLinkForm from './components/ImageLinkForm/ImageLinkForm';
 import FaceRecognition from './components/FaceRecognition/FaceRecognition';
 import Register from './components/Register/Register';
 import './App.css';
-
-const app = new Clarifai.App({
- apiKey: '639012d464404f3dae7d61f1fe35f9f2'
-});
 
 const particlesOptions = {
   particles: {
@@ -29,16 +24,44 @@ const particlesOptions = {
   }
 };
 
+const initialState = {
+  input: '',
+  img_url: '',
+  box: {},
+  route: 'signin',
+  isSignedin: false,
+  user: {
+    id: '',
+    name: '',
+    email: '',
+    entries: 0,
+    join: '',
+  }
+}  
+
+
 class App extends Component {
   constructor(){
     super();
-    this.state = {
-      input: '',
-      img_url: '',
-      box: {},
-      route: 'signin',
-      isSignedin: false,
-    }
+    this.state = initialState;
+  }
+
+  componentDidMount(){
+    fetch('http://localhost:5000/')
+      .then(response => response.json())
+      .then(console.log);
+  }
+
+  loadUser = (data) => {
+    this.setState({
+      user: {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        entries: data.entries,
+        join: data.join,        
+      }
+    })
   }
 
   calculateFaceLocation = (data) => {
@@ -63,11 +86,33 @@ class App extends Component {
 
   onButtonClick = () => {
     this.setState({img_url: this.state.input});
-    app.models.predict(
-      Clarifai.FACE_DETECT_MODEL, 
-      this.state.input)
-    .then(response => this.calculateFaceLocation(response))
-    .then(box => this.displayFaceBox(box))
+    fetch('http://localhost:5000/imageurl', {
+      'method': 'post',
+      'headers': {'Content-type': 'application/json'},
+      'body': JSON.stringify({
+        'input': this.state.input
+      })
+    })
+    .then(response => response.json())
+    .then(response => {
+      if(response){
+        fetch('http://localhost:5000/image', {
+          'method': 'put',
+          'headers': {
+            'Content-type': 'application/json'
+          },
+          'body': JSON.stringify({
+            'id': this.state.user.id
+          })
+        })
+          .then(response => response.json())
+          .then(count => { 
+            this.setState(Object.assign(this.state.user, {entries: count}));
+          })
+          .catch(console.log)
+      this.displayFaceBox(this.calculateFaceLocation(response));
+      }
+    })
     .catch( err => console.log(err));
   }
 
@@ -75,24 +120,30 @@ class App extends Component {
     if(route === 'home'){
       this.setState({isSignedin: true});
     }else if(route === 'signin') {
-      this.setState({isSignedin: false});
+      this.setState(initialState);
     }
     this.setState({route: route});
   }
 
   render() {
-    const {isSignedin, box, img_url, route} = this.state
+    const {isSignedin, box, img_url, route} = this.state;
+    const { name, entries } = this.state.user;  
+
     return (
       <div className="App">
         <Particles className='particles' params={particlesOptions}  />
         <Navigation onRouteChange={this.onRouteChange} isSignedin={isSignedin}/>
         {
           (route === 'signin'
-            ? <Signin onRouteChange={this.onRouteChange}/>
+            ? <Signin 
+            onRouteChange={this.onRouteChange}
+            loadUser={this.loadUser}/>
             : (route === 'home'
               ? <div>
                   <Logo />
-                  <Rank />
+                  <Rank 
+                  name={name}
+                  entries={entries}/>
                   <ImageLinkForm 
                     onInputChange={this.onInputChange} 
                     onButtonClick={this.onButtonClick}
@@ -102,7 +153,9 @@ class App extends Component {
                   img_url={img_url}
                   />     
                 </div>
-                : <Register onRouteChange={this.onRouteChange} />
+                : <Register 
+                onRouteChange={this.onRouteChange} 
+                loadUser={this.loadUser}/>
             ))
         }
       </div>
