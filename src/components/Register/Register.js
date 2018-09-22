@@ -23,7 +23,7 @@ class Register extends React.Component{
   }
 
   onSubmitRegister = () => {
-    fetch('http://localhost:5000/register/', {
+    fetch('https://guarded-wildwood-19338.herokuapp.com/register/', {
       'method': 'post',
       'headers': {
         'Content-type': 'application/json'

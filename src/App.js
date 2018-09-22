@@ -47,7 +47,7 @@ class App extends Component {
   }
 
   componentDidMount(){
-    fetch('http://localhost:5000/')
+    fetch('https://guarded-wildwood-19338.herokuapp.com/')
       .then(response => response.json())
       .then(console.log);
   }
@@ -86,7 +86,7 @@ class App extends Component {
 
   onButtonClick = () => {
     this.setState({img_url: this.state.input});
-    fetch('http://localhost:5000/imageurl', {
+    fetch('https://guarded-wildwood-19338.herokuapp.com/imageurl', {
       'method': 'post',
       'headers': {'Content-type': 'application/json'},
       'body': JSON.stringify({
@@ -96,7 +96,7 @@ class App extends Component {
     .then(response => response.json())
     .then(response => {
       if(response){
-        fetch('http://localhost:5000/image', {
+        fetch('https://guarded-wildwood-19338.herokuapp.com/image', {
           'method': 'put',
           'headers': {
             'Content-type': 'application/json'
